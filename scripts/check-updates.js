@@ -6,7 +6,7 @@ const os = require("os");
 const https = require("https");
 
 const REPO_ROOT = path.resolve(__dirname, "..");
-const DEFAULT_REMOTE_BASE = "https://raw.githubusercontent.com/deepeater/skills/main";
+const DEFAULT_REMOTE_BASE = "https://raw.githubusercontent.com/deepeater/team-skills/main";
 
 const args = process.argv.slice(2);
 const options = {
