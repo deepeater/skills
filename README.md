@@ -1,52 +1,32 @@
-# @deepeater/team
+# deepeater-skills
 
-食悟 AI 项目专用知识库检索与沉淀 skill。
+食悟 AI 项目的团队 skill 集合。
 
-## 简介
+每个 skill 都是独立的，参考 lark-cli 的设计模式，按领域分拆。
 
-本 skill 用于配合 lark-cli 从飞书知识库「食悟 AI项目-Agent专用」中查找、读取、汇总、更新团队投喂给 AI 的项目知识。
-
-## 依赖
-
-本 skill 依赖以下 skill 和工具：
-
-- **Skills**:
-  - `lark-wiki` - 飞书知识库管理
-  - `lark-doc` - 飞书文档读取和维护
-
-- **命令行工具**:
-  - `lark-cli` - 飞书 CLI 工具
-
-## 安装
+## 安装全部 skill
 
 ```bash
-# 全局安装
-npx skills add deepeater/team -y -g
-
-# 项目级安装
-npx skills add deepeater/team -y
+# 一键安装所有 skill
+bash install.sh
 ```
 
-## 知识库
+## 单独安装某个 skill
 
-固定知识库名称：**食悟 AI项目-Agent专用**
+```bash
+npx skills add ./deepeater-wiki -g -y # 项目知识库与方向对齐
+npx skills add ./deepeater-pm -g -y   # 产品设计、PRD、功能评审、MVP 边界
+```
 
-推荐一级目录：
-1. 项目整体方向决策
-2. 产品研发
-3. 市场营销
-4. 运营支持
-5. 团队协作与项目管理
+## 安装后验证
 
-## 触发场景
+```bash
+npx skills list -g | grep deepeater
+```
 
-当用户提到以下任一意图时使用本 skill：
+## Skill 列表
 
-- 查询、总结、核对「食悟 AI」项目知识
-- 查找团队投喂给 AI 的资料、决策、需求、会议结论、研发方案、营销素材或运营 SOP
-- 向「食悟 AI项目-Agent专用」知识库新增、更新、整理、归档文档
-- 基于知识库内容生成 PRD、研发拆解、运营方案、营销文案、决策备忘录、项目周报
-
-## License
-
-MIT
+| Skill                    | 说明                     |
+|--------------------------|------------------------|
+| deepeater-wiki           | 独立项目基线、方向对齐、飞书知识库只读检索 |
+| deepeater-pm             | 产品设计、PRD、功能评审、MVP 边界 |
