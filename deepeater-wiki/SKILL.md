@@ -48,6 +48,14 @@ metadata:
 | 餐饮业务部 | `XFfiwavjxiQc5zkgg7ycpHgsn6b` | `7523570528028884996` | 部门职责 | `docx` | 餐饮业务、门店场景、行业资料 |
 | 公司信息 | `Rn3jwtDihiYrJyk7dCVcBpSBnNf` | `7523514647175888899` | 公司介绍 | `docx` | 公司介绍、组织信息、员工通讯录 |
 
+## 已知高频路径
+
+当用户问题命中下表语义时，优先按路径逐级定位，不要直接读取入口节点本体，也不要先进入入口节点的 `bitable` 内部表结构。
+
+| 用户说法 | 知识库路径 | 处理目标 |
+|----------|------------|----------|
+| bug 管理、Bug 管理、产品 Bug、缺陷统计、未修复 bug | AI 开发部 -> 产品测试 -> 2026 产品 Bug 管理 | 先定位该 Wiki 节点，再按其 `obj_type` 路由读取内容；如果是 `docx`，用 `lark-doc`；如果文档内嵌 `bitable` / `sheet`，再下钻到对应资源 |
+
 ## 只读检索流程
 
 1. 根据用户问题选择入口：
@@ -55,20 +63,46 @@ metadata:
    - 品牌、文案、活动、渠道、新人任务：市场营销部。
    - 门店、餐饮场景、业务 SOP、行业知识：餐饮业务部。
    - 公司介绍、组织、员工基础信息：公司信息。
-2. 解析节点，确认当前资源类型：
+2. 如果用户给出或暗示了知识库路径（例如“AI 开发部 -> 产品测试 -> 2026 产品 Bug 管理”），必须先做路径定位：
+   - 从入口节点开始调用 `wiki nodes list` 列子节点。
+   - 在返回结果中按标题精确匹配下一段路径；精确匹配失败时，再做大小写、空格、全半角、`bug`/`Bug` 的宽松匹配。
+   - 匹配到子节点后，对该子节点继续 `wiki nodes list`，直到定位到路径末端。
+   - 路径末端节点才是本次要读取或统计的目标；不要因为入口节点本身是 `bitable` 就提前切到 `lark-base`。
+   ```bash
+   lark-cli wiki nodes list --params '{"space_id":"<space_id>","parent_node_token":"<parent_node_token>"}' --page-all --format json --as user
+   ```
+3. 解析目标节点，确认当前资源类型：
    ```bash
    lark-cli wiki spaces get_node --params '{"token":"<node_token>"}' --format json --as user
    ```
-3. 节点有子节点时，下钻目录：
+4. 节点有子节点或用户问题明显指向子目录时，继续下钻目录，不要停在父级概览节点：
    ```bash
    lark-cli wiki nodes list --params '{"space_id":"<space_id>","parent_node_token":"<node_token>"}' --page-all --format json --as user
    ```
-4. 按 `obj_type` 路由：
+5. 按目标节点的 `obj_type` 路由：
    - `docx` / `doc`：使用 `lark-doc`，读取时必须带 `--api-version v2`，优先 `outline`，再用 `keyword` 或 `section` 精读，最后才读全文。
+     - 如果文档内容中出现 `<bitable>`、`<sheet>`、`<cite file-type="bitable">`、`<cite file-type="sheets">`，必须提取 token 并切到 `lark-base` 或 `lark-sheets` 读取内部数据。
    - `bitable`：使用 `lark-base` 读取多维表格结构和记录，不要用 `docs +fetch`。
    - `sheet`：使用 `lark-sheets`。
    - `file`：使用 `lark-drive` 查看元数据或下载后处理。
-5. 输出结论时必须标注来源，至少包含入口、节点标题、资源类型。资料不足时说明“基于当前可读知识库结果”。
+6. 只有当已知入口和逐级目录都定位不到目标时，才使用 `lark-drive` 的 `drive +search` 做资源发现；优先限制在对应 Wiki 空间：
+   ```bash
+   lark-cli drive +search --query "2026 产品 Bug 管理" --space-ids <space_id> --only-title --format json --as user
+   ```
+   如果缺少 `search:docs:read`，不要把授权作为第一路径；先说明已经完成了哪些 Wiki 节点下钻、卡在哪一级，并给出需要授权的最小原因。
+7. 输出结论时必须标注来源，至少包含入口、节点标题、资源类型。资料不足时说明“基于当前可读知识库结果”。
+
+## 统计类问题处理
+
+- 用户问“总数、按模块统计、未修复”等结构化统计时，先找到承载数据的实际资源：
+  - 如果目标是 `bitable`，读取字段列表，识别模块字段（如“功能模块”“模块”）和状态字段（如“状态”“修复状态”“处理状态”），再按记录聚合。
+  - 如果目标是 `docx`，先 `docs +fetch --api-version v2 --scope keyword --keyword "bug|Bug|缺陷|未修复|功能模块"`；若命中表格或内嵌资源，再提取并下钻。
+  - 判断“未修复”时，不要只排除一个固定状态；优先读取状态枚举。常见已修复状态包括“已修复”“已关闭”“已验证”“完成”，其余如“未修复”“待修复”“处理中”“待验证”“重新打开”应归入未修复或在结果中单独列出。
+- 统计输出应包含：
+  - bug 总条数。
+  - 未修复 bug 总数。
+  - 按功能模块分组的未修复数量。
+  - 使用的字段名和状态口径。
 
 ## 常见任务处理
 
@@ -76,4 +110,5 @@ metadata:
 - 写产品或业务文档：先对齐餐饮行业、语音访台、超级私域、门店经营问题，再按需检索 AI 开发部或餐饮业务部。
 - 查市场资料：优先检索市场营销部，必要时补充公司信息。
 - 查新人任务或部门任务：优先列出对应部门子节点，遇到 `bitable` 切到 `lark-base`。
+- 查 bug 管理或缺陷统计：优先走“AI 开发部 -> 产品测试 -> 2026 产品 Bug 管理”路径定位，再根据目标节点类型读取和统计。
 - 用户要求投喂新知识：说明本 skill 只读，不直接写入知识库。
