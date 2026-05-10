@@ -8,7 +8,7 @@
 
 ```bash
 # 一键安装所有 skill
-bash install.sh
+npx skills add deepeater/team-skills -y -g
 ```
 
 ## 单独安装某个 skill
