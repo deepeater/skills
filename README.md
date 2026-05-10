@@ -24,6 +24,18 @@ npx skills add ./deepeater-pm -g -y   # 产品设计、PRD、功能评审、MVP 
 npx skills list -g | grep deepeater
 ```
 
+## 检查版本
+
+每个 skill 独立使用自己的 `package.json.version` 管理版本。
+
+```bash
+# 对比当前仓库版本和已安装版本
+node scripts/check-updates.js
+
+# 从 GitHub main 分支读取最新版本再对比
+node scripts/check-updates.js --remote
+```
+
 ## Skill 列表
 
 | Skill                    | 说明                     |
